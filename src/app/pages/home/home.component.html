@@ -1,0 +1,169 @@
+<div class="home-container">
+
+  <header class="home-header">
+    <h1 class="title">Peajes - Usando {{usadosCounter()}}</h1>
+    <div class="header-actions">
+      <button class="btn btn-fusionar" [class.btn-fusionar-ready]="fusionCandidates().length > 0"
+        (click)="openFusionarModal()">
+        Fusionar
+      </button>
+      <button class="btn btn-secondary" (click)="openActivosModal()">Activos</button>
+    </div>
+  </header>
+
+  <main class="home-content">
+
+    <!-- Section Template -->
+    <ng-container
+      *ngTemplateOutlet="sectionTemplate; context: { title: 'Inventario', sectionKey: 'inventario' }"></ng-container>
+    <ng-container
+      *ngTemplateOutlet="sectionTemplate; context: { title: 'Usando', sectionKey: 'usando' }"></ng-container>
+    <ng-container *ngTemplateOutlet="sectionTemplate; context: { title: 'Total', sectionKey: 'total' }"></ng-container>
+
+  </main>
+</div>
+
+<!-- Modal Fusionar -->
+<div class="modal-backdrop" *ngIf="showFusionarModal()" (click)="closeFusionarModal()"></div>
+<div class="modal-panel" *ngIf="showFusionarModal()" role="dialog" aria-modal="true">
+  <div class="modal-header">
+    <h2 class="modal-title">Fusionar</h2>
+    <button class="modal-close" (click)="closeFusionarModal()" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="fusion-empty" *ngIf="fusionCandidates().length === 0 && fusionChains().length === 0">
+      No hay carros con mutación que tengan 3 o más en total.
+    </p>
+
+    <!-- Lista de fusiones inmediatas -->
+    <div class="fusion-list" *ngIf="fusionCandidates().length > 0">
+      <h3 class="fusion-section-title">Fusiones Disponibles</h3>
+      <div class="fusion-item" *ngFor="let item of fusionCandidates()">
+        <div class="activo-info">
+          <span class="activo-tipo">{{ item.tipo }} · {{ item.mutacionNombre }} -
+            {{item.hora}}:{{item.minuto}}:{{item.segundo}} </span>
+          <span class="activo-nombre">{{ item.carroNombre }} - {{ item.nextValue }} </span>
+        </div>
+        <div class="fusion-counts">
+          <span class="fusion-count">Inv {{ item.inventario }}</span>
+          <span class="fusion-count">Uso {{ item.usando }}</span>
+          <span class="fusion-total">Total {{ item.total }}</span>
+          <button class="btn btn-fusionar-item" type="button" (click)="fusionar(item)">
+            Fusionar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predicción de cadenas de fusión -->
+    <div class="fusion-chain-preview" *ngIf="fusionChains().length > 0">
+      <h3 class="fusion-section-title">Predicción de Cadencia</h3>
+      <div class="chain-item" *ngFor="let chain of fusionChains()">
+        <div class="chain-header">
+          <span class="chain-carro">{{ chain.carroNombre }}</span>
+          <span class="chain-tipo">{{ chain.tipo }}</span>
+        </div>
+        <div class="chain-steps">
+          <div class="chain-step" *ngFor="let step of chain.steps; let i = index">
+            <div class="step-header">
+              <span class="step-label">Orden {{ step.orden }}: {{ step.mutacionNombre }}</span>
+              <span class="step-arrow">→</span>
+              <span class="step-label">Orden {{ step.orden + 1 }}</span>
+            </div>
+            <div class="step-info">
+              <span class="step-before">{{ step.before }} iniciales</span>
+              <span class="step-fusions">{{ step.fusions }} fusiones →</span>
+              <span class="step-after">{{ step.after }} finales</span>
+            </div>
+          </div>
+        </div>
+        <div class="chain-footer">
+          <span class="chain-final-label">Resultado final:</span>
+          <span class="chain-final">{{ chain.finalCount }} de {{ chain.finalMutacionNombre }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Activos -->
+<div class="modal-backdrop" *ngIf="showActivosModal()" (click)="closeActivosModal()"></div>
+<div class="modal-panel" *ngIf="showActivosModal()" role="dialog" aria-modal="true">
+  <div class="modal-header">
+    <h2 class="modal-title">Gestión de Activos</h2>
+    <button class="modal-close" (click)="closeActivosModal()" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="activos-list">
+      <div class="activo-item" *ngFor="let carro of carros(); index as i">
+        <div class="activo-info">
+          <span class="activo-tipo">{{ getTipoNombre(carro.idTipo) }}</span>
+          <span class="activo-nombre">{{ carro.nombre }}</span>
+        </div>
+        <button class="toggle-btn" [class.toggle-on]="carro.activo === true || carro.activo === 'true'"
+          [class.toggle-off]="!(carro.activo === true || carro.activo === 'true')" (click)="toggleActivo(carro, i)">
+          {{ (carro.activo === true || carro.activo === 'true') ? 'Activo' : 'Inactivo' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #sectionTemplate let-title="title" let-sectionKey="sectionKey">
+  <section class="data-section">
+    <h2 class="sectiole">{{ title }}</h2>
+
+    <div class="table-container">
+      <table class="modern-table" (mouseleave)="setHoveredCol(-1)">
+        <thead>
+          <tr>
+            <th (mouseenter)="setHoveredCol(-10)">Tipo</th>
+            <th (mouseenter)="setHoveredCol(-11)">Nombre</th>
+            <th *ngFor="let mut of mutacionesCols(); let i = index" class="text-center {{ mut.nombre }}"
+              (mouseenter)="setHoveredCol(i)" [class.col-hovered]="hoveredColIndex() === i">{{ mut.nombre }}</th>
+            <th (mouseenter)="setHoveredCol(-12)" class="text-right">Precio</th>
+            <th (mouseenter)="setHoveredCol(-13)" class="text-right">Mul</th>
+            <th (mouseenter)="setHoveredCol(-14)" class="text-right">Final</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of sectionKey === 'usando' ? listTableUsando() : listTable()" class="table-row">
+            <td (mouseenter)="setHoveredCol(-10)">{{ row.tipo }}</td>
+            <td class="font-semibold" (mouseenter)="setHoveredCol(-11)">{{ row.nombre }}</td>
+            <td *ngFor="let mutCol of mutacionesCols(); let i = index" (mouseenter)="setHoveredCol(i)"
+              [class.col-hovered]="hoveredColIndex() === i">
+              <div class="text-center cell-controls">
+                <button *ngIf="sectionKey !== 'total'" class="btn-icon"
+                  (click)="changeValue(sectionKey, row.id, mutCol.id, -1, row['mut_' + mutCol.orden].id)">&minus;</button>
+                <span class="value">{{ row["mut_" + mutCol.orden][sectionKey] }}</span>
+                <button *ngIf="sectionKey !== 'total'" class="btn-icon"
+                  (click)="changeValue(sectionKey, row.id, mutCol.id, 1, row['mut_' + mutCol.orden].id)">&plus;</button>
+              </div>
+            </td>
+
+            <td class="text-right text-muted" (mouseenter)="setHoveredCol(-12)">{{ row.precio |
+              currency:'USD':'symbol':'1.0-0' }}</td>
+            <td class="text-right font-medium highlight-mul" (mouseenter)="setHoveredCol(-13)">{{
+              row.dataFinal[sectionKey].maxMul }}</td>
+            <td class="text-right font-bold highlight-price" (mouseenter)="setHoveredCol(-14)">{{
+              row.dataFinal[sectionKey].maxFinal |
+              currency:'USD':'symbol':'1.0-0' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-footer" *ngIf="sectionKey !== 'total'">
+      <div class="stat-card max-card">
+        <span class="stat-label">Máximo:</span>
+        <span class="stat-value">{{ getMinMaxStat(sectionKey).maxName }} ({{ getMinMaxStat(sectionKey).maxPrecioF |
+          currency:'USD':'symbol':'1.0-0' }})</span>
+      </div>
+      <div class="stat-card min-card">
+        <span class="stat-label">Mínimo:</span>
+        <span class="stat-value">{{ getMinMaxStat(sectionKey).minName }} ({{ getMinMaxStat(sectionKey).minPrecioF |
+          currency:'USD':'symbol':'1.0-0' }})</span>
+      </div>
+    </div>
+  </section>
+</ng-template>
