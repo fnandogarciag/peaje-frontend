@@ -27,7 +27,8 @@ export class HomeComponent implements OnInit {
   mutacionesCols = signal<any[]>([]);
   listTable = signal<any[]>([]);
   listTableUsando = signal<any[]>([]);
-  usadosCounter = signal(0);
+  inventarioCounter = signal(0);
+  usandoCounter = signal(0);
 
   hoveredColIndex = signal<number>(-1);
   setHoveredCol(index: number) { this.hoveredColIndex.set(index); }
@@ -165,19 +166,25 @@ export class HomeComponent implements OnInit {
     })
     this.listTable.set([...newListTable]);
 
-
-    this.usadosCounter.set(this.carrosMutaciones().reduce(
-      (accumulator, currentValue) => accumulator + currentValue.usando,
-      0,
-    ))
+    let newInventario = 0;
+    let newUsando = 0;
+    this.carrosMutaciones().forEach(m => {
+      newInventario += m.inventario
+      newUsando += m.usando
+    });
+    this.inventarioCounter.set(newInventario);
+    this.usandoCounter.set(newUsando);
 
 
     this.calculateMinMax('inventario');
     this.calculateMinMax('usando');
 
     const maxMul = this.mutacionesCols()[0].multiplicador;
-    this.listTableUsando.set(newListTable.filter(c => (c.precio * maxMul) > this.getMinMaxStat('usando').minPrecioF))
+    this.listTableUsando.set(newListTable.filter(c => (c.precio * maxMul) >= this.getMinMaxStat('usando').minPrecioF))
     this.updateFusionCandidates();
+    if (this.listTableUsando().length === 0) {
+      this.listTableUsando.set([newListTable[0]])
+    }
   }
 
   updateFusionCandidates() {

@@ -9,10 +9,10 @@ export class CrudService {
   private http = inject(HttpClient);
 
   getAll(endpoint: string): Observable<any[]> {
-    return this.http.get<any[]>(`http://localhost:5000/api/${endpoint}`);
+    return this.http.get<any[]>(`http://192.168.10.24:5000/api/${endpoint}`);
   }
 
   createOrUpdate(endpoint: string, data: any): Observable<any> {
-    return this.http.post<any>(`http://localhost:5000/api/${endpoint}`, data);
+    return this.http.post<any>(`http://192.168.10.24:5000/api/${endpoint}`, data);
   }
 }
