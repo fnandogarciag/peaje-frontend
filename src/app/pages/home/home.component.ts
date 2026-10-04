@@ -39,10 +39,10 @@ export class HomeComponent implements OnInit {
 
   showFusionarModal = signal(false);
   fusionCandidates = signal<any[]>([]);
+  fusionChains = signal<any[]>([]);
   openFusionarModal() { this.showFusionarModal.set(true); }
   closeFusionarModal() { this.showFusionarModal.set(false); }
 
-  fusionChains = signal<any[]>([]);
 
   toggleActivo(carro: any, index: number) {
     const newCar = { ...carro, activo: !carro.activo }
@@ -96,8 +96,6 @@ export class HomeComponent implements OnInit {
     const activeCarros = this.carros().filter(c => c.activo === true || c.activo === 'true' || !('activo' in c));
 
     const newListTable = activeCarros.map(carro => {
-
-
       const tipo = this.tipos().find(t => t.id === carro.idTipo)?.nombre || 'N/A';
 
       let row: any = {
@@ -271,8 +269,7 @@ export class HomeComponent implements OnInit {
 
       candidatosFaltantes = candidatosFaltantes.filter(x => x.idCarro !== carro.id);
     }
-    
-    this.fusionChains.set([...prediccion].sort((a, b) => a.finalCount - b.finalCount));
+    this.fusionChains.set([...prediccion].sort((a, b) => b.finalCount - a.finalCount));
   }
 
   fusionar(item: {
@@ -374,7 +371,7 @@ export class HomeComponent implements OnInit {
 
   changeValue(sectionKey: 'inventario' | 'usando', carroId: number, mutacionId: number, delta: number, idCarMut: number) {
     if (idCarMut > 0) {
-      const updated = [...this.carrosMutaciones()];
+      const updated = this.carrosMutaciones().map(x => ({ ...x }));
       const cm = updated[this.carrosMutaciones().findIndex(x => x.idCarro === carroId && x.idMutacion === mutacionId)];
 
       if (sectionKey === 'inventario') {
