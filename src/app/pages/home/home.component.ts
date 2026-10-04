@@ -166,14 +166,17 @@ export class HomeComponent implements OnInit {
     })
     this.listTable.set([...newListTable]);
 
+
     let newInventario = 0;
     let newUsando = 0;
-    this.carrosMutaciones().forEach(m => {
-      newInventario += m.inventario
-      newUsando += m.usando
-    });
-    this.inventarioCounter.set(newInventario);
-    this.usandoCounter.set(newUsando);
+    this.carrosMutaciones().forEach(
+      m => {
+        newInventario += m.inventario;
+        newUsando += m.usando;
+      }
+    )
+    this.inventarioCounter.set(newInventario)
+    this.usandoCounter.set(newUsando)
 
 
     this.calculateMinMax('inventario');
@@ -216,7 +219,8 @@ export class HomeComponent implements OnInit {
       }
     })
 
-    this.fusionCandidates.set(newFusionCandidates);
+    // this.fusionCandidates.set(newFusionCandidates);
+    this.fusionCandidates.set(newFusionCandidates.sort((a, b) => a.nextValue - b.nextValue));
 
     if (candidates.length === 0) return;
 
