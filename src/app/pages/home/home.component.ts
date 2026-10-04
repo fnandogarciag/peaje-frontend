@@ -27,24 +27,21 @@ export class HomeComponent implements OnInit {
   mutacionesCols = signal<any[]>([]);
   listTable = signal<any[]>([]);
   listTableUsando = signal<any[]>([]);
-  usadosCounter = signal(0);
+  inventarioCounter = signal(0);
+  usandoCounter = signal(0);
 
-  // Column hover tracking (shared across all sections via index)
   hoveredColIndex = signal<number>(-1);
   setHoveredCol(index: number) { this.hoveredColIndex.set(index); }
 
-  // Modal activos
   showActivosModal = signal(false);
   openActivosModal() { this.showActivosModal.set(true); }
   closeActivosModal() { this.showActivosModal.set(false); }
 
-  // Modal fusionar
   showFusionarModal = signal(false);
   fusionCandidates = signal<any[]>([]);
   openFusionarModal() { this.showFusionarModal.set(true); }
   closeFusionarModal() { this.showFusionarModal.set(false); }
 
-  // Fusion chain prediction
   fusionChains = signal<any[]>([]);
 
   toggleActivo(carro: any, index: number) {
@@ -65,7 +62,6 @@ export class HomeComponent implements OnInit {
     return this.tipos().find(t => t.id === idTipo)?.nombre || 'N/A';
   }
 
-  // Variables to hold min/max for each section to display in the footer
   minMaxStats = signal<minMaxStatsObject>({
     inventario: { maxName: '', maxPrecioF: 0, minName: '', minPrecioF: 0 },
     usando: { maxName: '', maxPrecioF: 0, minName: '', minPrecioF: 0 },
@@ -95,10 +91,8 @@ export class HomeComponent implements OnInit {
   }
 
   buildListTable() {
-    // Ordenar mutaciones inverso al ID
     this.mutacionesCols.set([...this.mutaciones()].sort((a, b) => b.orden - a.orden));
 
-    // Filtrar carros activos
     const activeCarros = this.carros().filter(c => c.activo === true || c.activo === 'true' || !('activo' in c));
 
     const newListTable = activeCarros.map(carro => {
@@ -112,7 +106,6 @@ export class HomeComponent implements OnInit {
         nombre: carro.nombre,
         precio: carro.precio || 0,
       };
-      // Add each mutation as a dynamic field
       let dataFinal = {
         inventario: {
           maxMul: 0,
@@ -176,10 +169,16 @@ export class HomeComponent implements OnInit {
     this.listTable.set([...newListTable]);
 
 
-    this.usadosCounter.set(this.carrosMutaciones().reduce(
-      (accumulator, currentValue) => accumulator + currentValue.usando,
-      0,
-    ))
+    let newInventario = 0;
+    let newUsando = 0;
+    this.carrosMutaciones().forEach(
+      m => {
+        newInventario += m.inventario;
+        newUsando += m.usando;
+      }
+    )
+    this.inventarioCounter.set(newInventario)
+    this.usandoCounter.set(newUsando)
 
 
     this.calculateMinMax('inventario');
@@ -219,7 +218,8 @@ export class HomeComponent implements OnInit {
       }
     })
 
-    this.fusionCandidates.set(newFusionCandidates);
+    // this.fusionCandidates.set(newFusionCandidates);
+    this.fusionCandidates.set(newFusionCandidates.sort((a, b) => a.nextValue - b.nextValue));
 
     if (candidates.length === 0) return;
 
@@ -271,7 +271,7 @@ export class HomeComponent implements OnInit {
 
       candidatosFaltantes = candidatosFaltantes.filter(x => x.idCarro !== carro.id);
     }
-    // this.fusionChains.set([...prediccion].sort((a, b) => b.finalCount - a.finalCount));
+    
     this.fusionChains.set([...prediccion].sort((a, b) => a.finalCount - b.finalCount));
   }
 
@@ -374,28 +374,24 @@ export class HomeComponent implements OnInit {
 
   changeValue(sectionKey: 'inventario' | 'usando', carroId: number, mutacionId: number, delta: number, idCarMut: number) {
     if (idCarMut > 0) {
-      // Clonar el array para mantener inmutabilidad del signal
-      const updated = this.carrosMutaciones().map(x => ({ ...x }));
+      const updated = [...this.carrosMutaciones()];
       const cm = updated[this.carrosMutaciones().findIndex(x => x.idCarro === carroId && x.idMutacion === mutacionId)];
 
       if (sectionKey === 'inventario') {
-        if (delta < 0 && cm.inventario === 0) return; // no hacer nada si ya está en 0
+        if (delta < 0 && cm.inventario === 0) return; 
         cm.inventario = cm.inventario + delta;
 
       } else if (sectionKey === 'usando') {
         if (delta > 0) {
-          // +1 usando: restar de inventario si hay, sino solo sumar usando
           cm.usando = cm.usando + 1;
           if (cm.inventario > 0) cm.inventario = cm.inventario - 1;
         } else {
-          if (cm.usando === 0) return; // no hacer nada si usando está en 0
+          if (cm.usando === 0) return;
           cm.usando = cm.usando - 1;
           cm.inventario = cm.inventario + 1;
         }
       }
 
-
-      // Fetch para persistir en la base de datos
       this.crudService.createOrUpdate('carros-mutaciones', {
         id: idCarMut,
         idCarro: cm.idCarro,
@@ -411,7 +407,6 @@ export class HomeComponent implements OnInit {
       });
 
     } else if (delta > 0) {
-      // El registro no existe aún: crear con el valor inicial
       const newCm: any = {
         idCarro: carroId,
         idMutacion: mutacionId,
@@ -427,7 +422,6 @@ export class HomeComponent implements OnInit {
       }).subscribe({
         next: (data) => {
           newCm.id = data.id;
-          // Si es usando+ y no hay inventario, solo sumar usando (inventario queda en 0)
           this.carrosMutaciones.set([...this.carrosMutaciones(), newCm]);
           this.buildListTable();
         },
